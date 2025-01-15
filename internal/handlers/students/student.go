@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"githb.com/Raunak9199/students-api/internal/storage"
 	"githb.com/Raunak9199/students-api/internal/types"
@@ -57,5 +58,27 @@ func New(storage storage.Storage) http.HandlerFunc {
 		// w.Write([]byte("Welcome to students api"))
 
 		response.WriteJson(w, http.StatusCreated, map[string]int64{"id": lastId})
+	}
+}
+
+func GetById(storage storage.Storage) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		slog.Info("GetById", slog.String("id", id))
+
+		intId, er := strconv.ParseInt(id, 10, 64)
+		if er != nil {
+			slog.Error("Failed to parse id", slog.String("Er", er.Error()))
+			response.WriteJson(w, http.StatusBadRequest, response.GeneralError(er))
+			return
+		}
+		student, err := storage.GetStudentById(intId)
+
+		if err != nil {
+			slog.Error("Failed to get student", slog.String("Er", err.Error()))
+			response.WriteJson(w, http.StatusInternalServerError, response.GeneralError(err))
+		}
+
+		response.WriteJson(w, http.StatusOK, student)
 	}
 }
