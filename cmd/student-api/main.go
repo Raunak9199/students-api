@@ -12,6 +12,7 @@ import (
 
 	"githb.com/Raunak9199/students-api/internal/config"
 	"githb.com/Raunak9199/students-api/internal/handlers/students"
+	"githb.com/Raunak9199/students-api/internal/storage/sqlite"
 )
 
 func main() {
@@ -21,11 +22,18 @@ func main() {
 
 	// db setup
 
+	storage, err := sqlite.New(cfg)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	slog.Info("Storage Initialized", slog.String("env", cfg.Env), slog.String("version", "1.0.0"))
+
 	// setup router
 
 	router := http.NewServeMux()
 
-	router.HandleFunc("POST /api/students", students.New())
+	router.HandleFunc("POST /api/students", students.New(storage))
 
 	// setup server
 
