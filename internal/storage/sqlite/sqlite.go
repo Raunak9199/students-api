@@ -101,3 +101,58 @@ func (s *SQlite) GetStudents() ([]types.Student, error) {
 	}
 	return students, nil
 }
+func (s *SQlite) DeleteStudent(id int64) (types.Student, error) {
+	var student types.Student
+
+	// Fetch the student details before deletion
+	stmt, err := s.Db.Prepare("SELECT id, name, email, age FROM students WHERE id = ?")
+	if err != nil {
+		return types.Student{}, fmt.Errorf("failed to prepare SELECT query: %w", err)
+	}
+	defer stmt.Close()
+
+	err = stmt.QueryRow(id).Scan(&student.Id, &student.Name, &student.Email, &student.Age)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return types.Student{}, fmt.Errorf("no student found with id %d", id)
+		}
+		return types.Student{}, fmt.Errorf("failed to fetch student details: %w", err)
+	}
+
+	// Delete the student
+	_, err = s.Db.Exec("DELETE FROM students WHERE id = ?", id)
+	if err != nil {
+		return types.Student{}, fmt.Errorf("failed to delete student with id %d: %w", id, err)
+	}
+
+	// Return the deleted student details
+	return student, nil
+}
+
+func (s *SQlite) UpdateStudent(id int64, student types.Student) (types.Student, error) {
+
+	var existingStudent types.Student
+	err := s.Db.QueryRow("SELECT id, name, email, age FROM students WHERE id = ?", id).
+		Scan(&existingStudent.Id, &existingStudent.Name, &existingStudent.Email, &existingStudent.Age)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return types.Student{}, fmt.Errorf("student with id %d not found", id)
+		}
+		return types.Student{}, fmt.Errorf("failed to fetch student details: %w", err)
+	}
+
+	_, err = s.Db.Exec(
+		"UPDATE students SET name = ?, email = ?, age = ? WHERE id = ?",
+		student.Name, student.Email, student.Age, id,
+	)
+	if err != nil {
+		return types.Student{}, fmt.Errorf("failed to update student: %w", err)
+	}
+
+	return types.Student{
+		Id:    id,
+		Name:  student.Name,
+		Email: student.Email,
+		Age:   student.Age,
+	}, nil
+}
